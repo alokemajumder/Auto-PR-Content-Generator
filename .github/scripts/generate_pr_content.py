@@ -3,46 +3,58 @@ import json
 import requests
 import subprocess
 
+
+def setup_git():
+    # Set up Git by fetching all branches and tags
+    subprocess.run(['git', 'fetch', '--unshallow', '--tags', '--force'], check=True)
+    subprocess.run(['git', 'fetch', 'origin', '+refs/heads/*:refs/remotes/origin/*'], check=True)
+
+def get_pr_diff():
+    base_branch = os.getenv('GITHUB_BASE_REF', 'main')
+    current_branch = os.getenv('GITHUB_HEAD_REF', 'main')
+    try:
+        # Checkout the base branch
+        subprocess.run(['git', 'checkout', f'origin/{base_branch}'], check=True)
+        # Get diff between base and current PR branch
+        diff = subprocess.check_output(['git', 'diff', f'origin/{base_branch}', f'origin/{current_branch}'], text=True)
+    except subprocess.CalledProcessError:
+        diff = "Error fetching diff or no changes to compare."
+    return diff
+
 def call_api(url, headers, payload):
     response = requests.post(url, headers=headers, json=payload)
     if response.status_code != 200:
         raise Exception(f"API request failed with status {response.status_code}: {response.text}")
     return response.json()
 
-def generate_summary(api_key, engine_url, prompt):
+def generate_summary(api_key, prompt):
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "code-davinci-002",
+        "model": "gpt-3.5-turbo",
         "prompt": prompt,
-        "max_tokens": 150
+        "max_tokens": 200,
+        "temperature": 0.5
     }
+    engine_url = "https://api.openai.com/v1/completions"
     return call_api(engine_url, headers, payload)
 
-def get_git_diff():
-    try:
-        diff = subprocess.check_output(['git', 'diff', 'HEAD^', 'HEAD'], text=True)
-    except subprocess.CalledProcessError:
-        diff = "No previous commit to compare."
-    return diff
-
 def main():
-    diff = get_git_diff()
-    prompt = f"Summarize the following code changes in a detailed and formatted manner:\n{diff}"
+    setup_git()
+    diff = get_pr_diff()
+    prompt = f"Please summarize and analyze the following code changes:\n{diff}"
 
     openai_summary = generate_summary(
         os.getenv('OPENAI_API_KEY'),
-        "https://api.openai.com/v1/completions",
         prompt
     )["choices"][0]["text"]
 
-    # Assuming anthropic_summary setup remains the same
-    # Include similar error handling and model updating for Anthropic API as needed
-
-    formatted_content = f"## OpenAI Summary\n{openai_summary}\n\n## Further details to be added as required."
-    print(f"::set-output name=pr_content::{json.dumps(formatted_content)}")
+    print("Summary Generated Successfully: ", openai_summary)
+    # Print to output for GitHub Actions to use
+    print(f"::set-output name=pr_content::{json.dumps(openai_summary)}")
 
 if __name__ == "__main__":
     main()
+
