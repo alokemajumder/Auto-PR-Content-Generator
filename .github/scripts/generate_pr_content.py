@@ -15,7 +15,7 @@ def generate_summary(api_key, engine_url, prompt):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "code-davinci-002",
+        "model": "gpt-3.5-turbo",
         "prompt": prompt,
         "max_tokens": 150
     }
