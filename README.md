@@ -1,6 +1,23 @@
+
+
+![GitHub stars](https://img.shields.io/github/stars/alokemajumder/Auto-PR-Content-Generator?style=social)
+![GitHub forks](https://img.shields.io/github/forks/alokemajumder/Auto-PR-Content-Generator?style=social)
+![GitHub issues](https://img.shields.io/github/issues/alokemajumder/Auto-PR-Content-Generator)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/alokemajumder/Auto-PR-Content-Generator)
+![GitHub](https://img.shields.io/github/license/alokemajumder/Auto-PR-Content-Generator)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/alokemajumder/Auto-PR-Content-Generator)
+![GitHub contributors](https://img.shields.io/github/contributors/alokemajumder/Auto-PR-Content-Generator)
+![GitHub last commit](https://img.shields.io/github/last-commit/alokemajumder/Auto-PR-Content-Generator)
+![GitHub top language](https://img.shields.io/github/languages/top/alokemajumder/Auto-PR-Content-Generator)
+![Dependencies](https://img.shields.io/librariesio/github/alokemajumder/Auto-PR-Content-Generator)
+![Code size](https://img.shields.io/github/languages/code-size/alokemajumder/Auto-PR-Content-Generator)
+![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.png?v=103)
+
+
 # Auto PR Content Generator
 
 This GitHub Action uses AI models from OpenAI and Anthropic's Claude 3 to automatically generate formatted and insightful content for pull requests based on code changes. It is designed to streamline the PR review process by providing detailed summaries and insights.
+
 
 ## Features
 
