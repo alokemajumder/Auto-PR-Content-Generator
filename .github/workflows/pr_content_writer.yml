@@ -1,0 +1,47 @@
+name: Automatic PR Content Generator
+
+on:
+  workflow_dispatch:
+    inputs:
+      runWorkflow:
+        description: 'Manually trigger this workflow?'
+        required: true
+        default: 'yes'
+  pull_request:
+    types: [opened, reopened]
+    paths-ignore:
+      - '.github/workflows/**'
+
+jobs:
+  prepare_and_generate_content:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.runWorkflow == 'yes')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Generate PR content
+        id: generate_content
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python .github/scripts/generate_pr_content.py
+
+      - name: Update PR
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Update pull request content
+          title: 'Automatically Generated PR Summary'
+          body: ${{ steps.generate_content.outputs.pr_content }}
+          branch: 'auto-pr-content-branch'
