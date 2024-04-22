@@ -42,7 +42,3 @@ Check out our [contributing guidelines](CONTRIBUTING.md) for more information on
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
-
-## Contact
-
-Project Link: [https://github.com/yourusername/your-repository-name](https://github.com/yourusername/your-repository-name)
