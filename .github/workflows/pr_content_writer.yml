@@ -18,10 +18,10 @@ jobs:
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.runWorkflow == 'yes')
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4 # Updated from v2 to v4 to support Node.js 20
       
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4 # Updated from v2 to v4 to support Node.js 20
         with:
           python-version: '3.9'
       
@@ -38,7 +38,7 @@ jobs:
         run: python .github/scripts/generate_pr_content.py
 
       - name: Update PR
-        uses: peter-evans/create-pull-request@v3
+        uses: peter-evans/create-pull-request@v5 # Updated from v3 to v5 for compatibility with newer Node.js versions
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: Update pull request content
