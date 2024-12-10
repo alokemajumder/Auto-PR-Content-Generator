@@ -1,48 +1,82 @@
 import os
 import json
 import requests
-import subprocess
+from dotenv import load_dotenv
+load_dotenv()
 
-def call_api(url, headers, payload):
-    response = requests.post(url, headers=headers, json=payload)
-    if response.status_code != 200:
-        raise Exception(f"API request failed with status {response.status_code}: {response.text}")
-    return response.json()
+# Read the Gemini API key from environment variables
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+if not GEMINI_API_KEY:
+    raise Exception("GEMINI_API_KEY is not set in the environment variables.")
 
-def generate_summary(api_key, engine_url, prompt):
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "code-davinci-002",
-        "prompt": prompt,
-        "max_tokens": 150
-    }
-    return call_api(engine_url, headers, payload)
+# API URL for Gemini (replace with actual Gemini endpoint)
+engine_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
-def get_git_diff():
-    try:
-        diff = subprocess.check_output(['git', 'diff', 'HEAD^', 'HEAD'], text=True)
-    except subprocess.CalledProcessError:
-        diff = "No previous commit to compare."
-    return diff
+# Headers with Authorization token
+headers = {
+    'Authorization': f'Bearer {GEMINI_API_KEY}',
+    'Content-Type': 'application/json'
+}
 
-def main():
-    diff = get_git_diff()
-    prompt = f"Summarize the following code changes in a detailed and formatted manner:\n{diff}"
+# Prepare the payload for the API request
+payload = {
+    "contents": [
+        {
+            "parts": [{"text": "Write a summary for the changes made in this pull request."}]
+        }
+    ]
+}
 
-    openai_summary = generate_summary(
-        os.getenv('OPENAI_API_KEY'),
-        "https://api.openai.com/v1/completions",
-        prompt
-    )["choices"][0]["text"]
+# Make the request to the Gemini API
+response = requests.post(engine_url, headers=headers, json=payload)
 
-    # Assuming anthropic_summary setup remains the same
-    # Include similar error handling and model updating for Anthropic API as needed
+# Check for successful response
+if response.status_code == 200:
+    response_data = response.json()
+    pr_content = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+    print("Generated PR Content: ", pr_content)
+else:
+    print(f"API request failed with status {response.status_code}: {response.text}")
 
-    formatted_content = f"## OpenAI Summary\n{openai_summary}\n\n## Further details to be added as required."
-    print(f"::set-output name=pr_content::{json.dumps(formatted_content)}")
 
-if __name__ == "__main__":
-    main()
+# --
+# import os
+# import json
+# import requests
+# from dotenv import load_dotenv
+# load_dotenv()
+
+# # Environment variable for your Gemini API Key
+# API_KEY = os.getenv("GEMINI_API_KEY")
+
+# if not API_KEY:
+#     raise Exception("GEMINI_API_KEY is not set in the environment variables.")
+
+# # API URL for Gemini (replace with the correct endpoint for your usage)
+# engine_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+
+# # Headers
+# headers = {
+#     'Content-Type': 'application/json'
+# }
+
+# # Prepare the payload for the API request
+# payload = {
+#     "contents": [
+#         {
+#             "parts": [{"text": "Write a story about a magic backpack."}]
+#         }
+#     ]
+# }
+
+# # Make the request to the Gemini API
+# response = requests.post(engine_url, headers=headers, json=payload)
+
+# # Check for a successful response
+# if response.status_code == 200:
+#     print("Response from Gemini API:")
+#     print(response.json())
+# else:
+#     print(f"API request failed with status {response.status_code}: {response.text}")
+
+# --

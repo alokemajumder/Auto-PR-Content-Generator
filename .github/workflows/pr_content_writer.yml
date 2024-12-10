@@ -33,9 +33,9 @@ jobs:
       - name: Generate PR content
         id: generate_content
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # Use GEMINI_API_KEY instead
         run: python .github/scripts/generate_pr_content.py
+
 
       - name: Update PR
         uses: peter-evans/create-pull-request@v5 # Updated from v3 to v5 for compatibility with newer Node.js versions
