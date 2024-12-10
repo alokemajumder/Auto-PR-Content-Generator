@@ -1,0 +1,21 @@
+
+Here's a .gitignore file tailored for your project, including typical Python and Node.js development exclusions, as well as any potential temporary files generated during GitHub workflows:
+
+gitignore
+Copy code
+# Python-specific
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+*.sqlite3
+
+# Jupyter Notebook
+.ipynb_checkpoints
