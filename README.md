@@ -16,12 +16,13 @@
 
 # Auto PR Content Generator
 
-This GitHub Action uses AI models from OpenAI and Anthropic's Claude 3 to automatically generate formatted and insightful content for pull requests based on code changes. It is designed to streamline the PR review process by providing detailed summaries and insights.
+This GitHub Action uses AI models from OpenAI and Anthropic's Claude 3, and Gemini to automatically generate formatted and insightful content for pull requests based on code changes. It is designed to streamline the PR review process by providing detailed summaries and insights.
 
 
 ## Features
 
 - Automated PR content generation using AI models.
+- Supports OpenAI (GPT-3.5) and Gemini for code summaries.
 - Manually triggered workflows to avoid unnecessary runs in the development repository.
 - Customizable for different AI platforms and integration.
 
@@ -32,7 +33,8 @@ This GitHub Action uses AI models from OpenAI and Anthropic's Claude 3 to automa
 Before you can use this GitHub Action, you need:
 - A GitHub account.
 - Administrative access to a repository.
-- OpenAI and Anthropic API keys added to your repository's secrets.
+- API keys for OpenAI, Anthropic (Claude 3), and Gemini added to your repository's secrets.
+
 
 ### Setup Instructions
 
@@ -40,15 +42,19 @@ Before you can use this GitHub Action, you need:
    - Fork this repository to your GitHub account or clone it directly to your local machine.
 
 2. **Configure GitHub Secrets**
-   - Go to your repository settings, navigate to 'Secrets', and add your `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`.
+   - Go to your repository settings, navigate to 'Secrets', and add your `OPENAI_API_KEY`, `GEMINI_API_KEY`, and `ANTHROPIC_API_KEY`.
 
 3. **Enable GitHub Actions**
    - Ensure that GitHub Actions is enabled for your repository.
 
-### Usage
+## Usage
 
-- To use the action, make a pull request to trigger the workflow or use the `workflow_dispatch` option to manually start the action.
-- Customize the workflow file and Python script as necessary to suit your project's needs.
+### Triggering the Actioin
+1. Automatically on Pull Requests:
+   - The action will automatically run when a pull request is created, reopened, or synchronized.
+
+2. Manually (using workflow_dispatch):
+   - You can manually trigger the workflow using the `workflow_dispatch` option. This allows you to specify the base branch, head branch, and the AI provider you wish to use (OpenAI, Anthropic, or Gemini).
 
 ## Contributing
 
