@@ -1,46 +1,101 @@
 name: Automatic PR Content Generator
 
 on:
-  workflow_dispatch:
-    inputs:
-      runWorkflow:
-        description: 'Manually trigger this workflow?'
-        required: true
-        default: 'yes'
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
     paths-ignore:
       - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "Base branch for manual trigger (default: main)"
+        required: false
+        default: "main"
+      head_ref:
+        description: "Head branch for manual trigger (default: feature)"
+        required: false
+        default: "feature"
+      api_provider:
+        description: "API provider to use (openai or gemini)"
+        required: false
+        default: "gemini"
 
 jobs:
   prepare_and_generate_content:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.runWorkflow == 'yes')
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Updated from v2 to v4 to support Node.js 20
-      
+        uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v4 # Updated from v2 to v4 to support Node.js 20
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install python-dotenv requests
+          pip install requests
 
-      - name: Generate PR content
-        id: generate_content
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # Use GEMINI_API_KEY instead
-        run: python .github/scripts/generate_pr_content.py
+      - name: Determine API Provider
+        id: determine_provider
+        run: |
+          # Set api_provider based on event type
+          if [ "${{ github.event.inputs.api_provider }}" != "" ]; then
+            echo "api_provider=${{ github.event.inputs.api_provider }}" >> $GITHUB_ENV
+          else
+            echo "api_provider=gemini" >> $GITHUB_ENV
+          fi
 
+      - name: Get diff of the pull request
+        id: get_diff
+        shell: bash
+        run: |
+          BASE_REF="${{ github.event.pull_request.base.ref || github.event.inputs.base_ref }}"
+          HEAD_REF="${{ github.event.pull_request.head.ref || github.event.inputs.head_ref }}"
 
-      - name: Update PR
-        uses: peter-evans/create-pull-request@v5 # Updated from v3 to v5 for compatibility with newer Node.js versions
+          echo "Fetching changes between base: $BASE_REF and head: $HEAD_REF"
+          
+          git fetch origin "$HEAD_REF" || echo "Failed to fetch head branch $HEAD_REF"
+          git fetch origin "$BASE_REF" || echo "Failed to fetch base branch $BASE_REF"
+          git diff "origin/$BASE_REF" > "diff.txt" || echo "Git diff failed"
+
+          if [ ! -s diff.txt ]; then
+            echo "No changes detected or invalid diff file. Exiting gracefully."
+            exit 0
+          fi
+
+          cat diff.txt
+          echo "pull_request_diff<<EOF" >> $GITHUB_OUTPUT
+          cat diff.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Debug PR Diff
+        run: |
+          echo "API Provider: ${{ env.api_provider }}"
+          echo "Diff File Content:"
+          cat diff.txt
+
+      - name: Execute generate_pr_content.py for OpenAI
+        if: ${{ env.api_provider == 'openai' }}
+        run: |
+          echo "Executing OpenAI content generation..."
+          python .github/scripts/generate_pr_content.py
+
+      - name: Update PR with generated content (Gemini)
+        if: ${{ env.api_provider == 'gemini' }}
+        uses: rubensflinco/gemini-code-review-action@1.0.5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: Update pull request content
-          title: 'Automatically Generated PR Summary'
-          body: ${{ steps.generate_content.outputs.pr_content }}
-          branch: 'auto-pr-content-branch'
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_repository: ${{ github.repository }}
+          github_pull_request_number: ${{ github.event.pull_request.number || 0 }}
+          git_commit_hash: ${{ github.event.pull_request.head.sha || '' }}
+          model: gemini-1.5-pro-latest
+          extra_prompt: "Provide a concise summary of the pull request changes."
+          temperature: 0.7
+          max_tokens: 256
+          pull_request_diff: ${{ steps.get_diff.outputs.pull_request_diff }}

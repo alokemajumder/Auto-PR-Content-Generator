@@ -1,82 +1,85 @@
 import os
-import json
 import requests
-from dotenv import load_dotenv
-load_dotenv()
+import subprocess
 
-# Read the Gemini API key from environment variables
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-if not GEMINI_API_KEY:
-    raise Exception("GEMINI_API_KEY is not set in the environment variables.")
 
-# API URL for Gemini (replace with actual Gemini endpoint)
-engine_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+def call_api(url, headers, payload):
+    """Helper function to make the API request."""
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code != 200:
+        raise Exception(
+            f"API request failed with status {response.status_code}: {response.text}"
+        )
+    return response.json()
 
-# Headers with Authorization token
-headers = {
-    'Authorization': f'Bearer {GEMINI_API_KEY}',
-    'Content-Type': 'application/json'
-}
 
-# Prepare the payload for the API request
-payload = {
-    "contents": [
-        {
-            "parts": [{"text": "Write a summary for the changes made in this pull request."}]
+def generate_summary(api_provider, api_key, engine_url, prompt):
+    """Generates a PR summary using OpenAI or Gemini API."""
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+    if api_provider == "openai":
+        payload = {
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": 150,
+            "temperature": 0.7,
         }
-    ]
-}
+    elif api_provider == "gemini":
+        payload = {
+            "model": "gemini-1.5-pro-latest",
+            "prompt": prompt,
+            "max_tokens": 300,
+            "temperature": 0.7,
+        }
+    else:
+        raise ValueError(f"Unsupported API provider: {api_provider}")
 
-# Make the request to the Gemini API
-response = requests.post(engine_url, headers=headers, json=payload)
-
-# Check for successful response
-if response.status_code == 200:
-    response_data = response.json()
-    pr_content = response_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-    print("Generated PR Content: ", pr_content)
-else:
-    print(f"API request failed with status {response.status_code}: {response.text}")
+    return call_api(engine_url, headers, payload)
 
 
-# --
-# import os
-# import json
-# import requests
-# from dotenv import load_dotenv
-# load_dotenv()
+def get_git_diff():
+    """Fetches the git diff between the current and previous commit."""
+    try:
+        diff = subprocess.check_output(["git", "diff", "HEAD^", "HEAD"], text=True)
+    except subprocess.CalledProcessError:
+        diff = subprocess.check_output(["git", "diff", "HEAD"], text=True)
+    return diff
 
-# # Environment variable for your Gemini API Key
-# API_KEY = os.getenv("GEMINI_API_KEY")
 
-# if not API_KEY:
-#     raise Exception("GEMINI_API_KEY is not set in the environment variables.")
+def main():
+    diff = get_git_diff()
+    print("Generated Git Diff:\n", diff)
+    prompt = f"Summarize the following code changes:\n{diff}"
 
-# # API URL for Gemini (replace with the correct endpoint for your usage)
-# engine_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+    api_provider = os.getenv("API_PROVIDER", "openai").lower()
 
-# # Headers
-# headers = {
-#     'Content-Type': 'application/json'
-# }
+    if api_provider == "openai":
+        engine_url = "https://api.openai.com/v1/chat/completions"
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OpenAI API key is missing!")
+        summary = generate_summary(api_provider, api_key, engine_url, prompt)[
+            "choices"
+        ][0]["message"]["content"]
 
-# # Prepare the payload for the API request
-# payload = {
-#     "contents": [
-#         {
-#             "parts": [{"text": "Write a story about a magic backpack."}]
-#         }
-#     ]
-# }
+    elif api_provider == "gemini":
+        engine_url = "https://api.gemini.com/v1/generate"
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("Gemini API key is missing!")
+        summary = generate_summary(api_provider, api_key, engine_url, prompt)[
+            "choices"
+        ][0]["text"]
 
-# # Make the request to the Gemini API
-# response = requests.post(engine_url, headers=headers, json=payload)
+    else:
+        raise ValueError(f"Unsupported API provider: {api_provider}")
 
-# # Check for a successful response
-# if response.status_code == 200:
-#     print("Response from Gemini API:")
-#     print(response.json())
-# else:
-#     print(f"API request failed with status {response.status_code}: {response.text}")
+    formatted_content = f"## {api_provider.capitalize()} Summary\n{summary}\n\n## Further details to be added as required."
+    print(formatted_content)
 
-# --
+
+if __name__ == "__main__":
+    main()
